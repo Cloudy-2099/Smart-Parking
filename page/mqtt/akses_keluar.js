@@ -1,0 +1,74 @@
+const mqtt = require('mqtt');
+const axios = require('axios');
+
+// Konfigurasi MQTT
+const broker = 'mqtt://broker.emqx.io';
+const topicKeluar = 'parkir/akses_keluar';
+const topicBalasan = 'parkir/akses_balasan';
+const topicA = 'parkir/feedback/slota'; // Feedback untuk slot A
+const topicB = 'parkir/feedback/slotb'; // Feedback untuk slot B
+
+// Connect ke broker MQTT
+const client = mqtt.connect(broker);
+
+client.on('connect', () => {
+    console.log('Terhubung ke broker MQTT');
+
+    // Subscribe ke topic untuk menerima UID dari ESP32
+    client.subscribe(topicKeluar, (err) => {
+        if (!err) {
+            console.log(`Subscribed to topic: ${topicKeluar}`);
+        } else {
+            console.error('Gagal subscribe:', err);
+        }
+    });
+});
+
+// Saat menerima pesan dari ESP32
+client.on('message', async (topic, message) => {
+    if (topic === topicKeluar) {
+        console.log('Pesan diterima:', message.toString());
+
+        try {
+            const jsonData = JSON.parse(message.toString());
+            const uid = jsonData.kartu;
+
+            console.log('UID diterima:', uid);
+
+            // Kirim UID ke PHP untuk validasi
+            const url = `http://localhost/skripsi/Pengcodean/page/entry_keluar.php?uid=${uid}`;
+            console.log('Mengirim request ke:', url);
+
+            const response = await axios.get(url);
+            const hasil = response.data;
+
+            console.log('Respon dari server PHP:', hasil);
+
+            // Cek hasil dari PHP dan balas ke ESP32
+            if (hasil.status === 'Diterima') {
+                client.publish(topicBalasan, JSON.stringify({
+                    akses: "keluar",
+                    uid: hasil.uid,
+                    jam_keluar: hasil.jam_keluar
+                }));
+
+                // Hanya publish ke slot jika ada properti 'nilai'
+                if ('nilai' in hasil) {
+                    const slotTopic = hasil.lokasi === 'slotb' ? topicB : topicA;
+                    client.publish(slotTopic, JSON.stringify({
+                        status: "Diterima",
+                        uid: hasil.uid,
+                        plat_nomor: hasil.plat_nomor,
+                        lokasi: hasil.lokasi,
+                        nilai: hasil.nilai
+                    }), { retain: true });
+                }
+            } else {
+                client.publish(topicBalasan, JSON.stringify({ status: "Ditolak" }));
+            }
+
+        } catch (error) {
+            console.error('Error saat memproses pesan atau request:', error.message);
+        }
+    }
+});
