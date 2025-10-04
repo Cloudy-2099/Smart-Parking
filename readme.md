@@ -10,4 +10,5 @@ Penggunaan program akses parkir punya Cloudy A.K.A Rizky Wahyudi
 
 2. Pastikan Merestart Seluruh Alat Setelah dinnyalakan. demi kelancaran sebuah alat
 
-3.
+3. Masih Bersifat prototype
+   
