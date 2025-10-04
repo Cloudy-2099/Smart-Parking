@@ -6,6 +6,7 @@ title: Control Sidebar Component
 Control sidebar is the right sidebar. It can be used for many purposes and is extremely easy to create. The sidebar ships with two different show/hide styles. The first allows the sidebar to slide over the content. The second pushes the content to make space for the sidebar. Either of these methods can be set through the [JavaScript options](../javascript/control-sidebar.md)
 
 
+
 The following code should be placed within the `.wrapper` div. I prefer to place it right after the footer.
 
 ##### Control Sidebar Push
